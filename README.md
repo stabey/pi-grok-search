@@ -17,9 +17,13 @@ Pi Coding Agent 的**深度联网搜索扩展**：通过 Grok API 注入 14 个�
 ## 环境要求
 
 - **Node.js ≥ 20**（使用 `AbortSignal.any` / `AbortSignal.timeout`）
-- **pi ≥ 0.73**（运行时依赖 `@mariozechner/pi-coding-agent` / `@mariozechner/pi-ai` / `typebox` 由 pi 提供）
+- **pi ≥ 0.73**（运行时依赖 `pi-coding-agent` / `pi-ai` / `typebox` 由 pi 提供）
 
-> 注：pi 生态包正从 `@mariozechner/*` 命名空间迁移到 `@earendil-works/*`。本扩展当前面向 `@mariozechner/*`（pi 0.73.x）；若你使用迁移后的新命名空间版本，请同步修改 `index.ts` 中的 import 来源后安装。
+同时兼容：
+- pi 0.73.x（`@mariozechner/*`）
+- pi 0.74+（`@earendil-works/*`，含当前最新版）
+
+扩展会按新 → 旧的顺序解析包名，不用手改 import。
 
 ## 安装（任意环境通用）
 
@@ -81,6 +85,7 @@ npm run test:live  # 真实 API 集成测试（需已配置 GROK_API_URL/KEY，�
 │   ├── fetch.ts        # Tavily + Firecrawl 抓取链路
 │   ├── planning.ts     # 搜索规划六阶段引擎
 │   ├── prompts.ts      # 搜索/抓取系统提示词
+│   ├── pi-compat.ts    # 兼容 @earendil-works/* 与 @mariozechner/*
 │   └── sources.ts      # 信源提取/合并/缓存
 ├── install.sh          # 一键安装脚本
 └── .env.example        # 配置模板
