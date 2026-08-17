@@ -34,7 +34,4 @@ export const DEFAULT_MAX_BYTES = coding.DEFAULT_MAX_BYTES;
 export const DEFAULT_MAX_LINES = coding.DEFAULT_MAX_LINES;
 export const StringEnum = ai.StringEnum;
 
-/** Structural type so we do not hard-import either npm scope. */
-export type ExtensionAPI = {
-  registerTool: (tool: any) => void;
-};
+export type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
