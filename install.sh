@@ -4,7 +4,7 @@
 #
 # 功能:
 #   1. 把扩展源码安装到 pi 的用户扩展目录 ~/.pi/agent/extensions/grok-search/
-#   2. 校验 pi 运行时依赖（@mariozechner/pi-coding-agent / pi-ai / typebox）
+#   2. 校验 pi 运行时依赖（@earendil-works/* 或 @mariozechner/* 的 pi-coding-agent / pi-ai / typebox）
 #   3. 首次安装自动生成配置模板 ~/.config/grok-search/env
 #
 # 用法:
@@ -45,14 +45,14 @@ if command -v pi >/dev/null 2>&1; then
     "$(dirname "$(dirname "$PI_BIN")")/node_modules" \
     "$(dirname "$(dirname "$(dirname "$PI_BIN")")")/node_modules" \
     "$(npm root -g 2>/dev/null || true)"; do
-    if [[ -n "$probe" && -d "$probe/@mariozechner/pi-coding-agent" ]]; then
+    if [[ -n "$probe" && ( -d "$probe/@earendil-works/pi-coding-agent" || -d "$probe/@mariozechner/pi-coding-agent" ) ]]; then
       PI_MODULES="$probe"
       break
     fi
   done
 fi
 if [[ -z "$PI_MODULES" ]]; then
-  echo "⚠️  未找到 pi 依赖 @mariozechner/pi-coding-agent（确认 pi 安装完整即可，扩展运行时由 pi 提供这些包）。"
+  echo "⚠️  未找到 pi 依赖 @earendil-works/pi-coding-agent 或 @mariozechner/pi-coding-agent（确认 pi 安装完整即可，扩展运行时由 pi 提供这些包）。"
 else
   echo "✅ pi 依赖正常: $PI_MODULES"
 fi
@@ -63,7 +63,7 @@ cp "$SRC_DIR/index.ts" "$DEST/"
 cp -r "$SRC_DIR/lib" "$DEST/"
 echo "✅ 源码已安装: $DEST"
 echo "   - index.ts (主扩展, 注册 14 个工具)"
-echo "   - lib/ (config / grok / fetch / planning / prompts / sources)"
+echo "   - lib/ (config / grok / fetch / planning / prompts / sources / pi-compat)"
 
 # 4. 配置初始化（不覆盖已有配置）
 CONFIG_DIR="$HOME/.config/grok-search"

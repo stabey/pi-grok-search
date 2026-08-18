@@ -9,10 +9,9 @@
  *           Grok 自主多次搜索并带 citation_card 作答 → 从回答中剥离信源缓存。
  * 配置：环境变量 > ~/.config/grok-search/env（与 MCP 版共用同一份配置）
  */
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { truncateHead, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "./lib/pi-compat.ts";
+import { truncateHead, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, StringEnum } from "./lib/pi-compat.ts";
 import { Type } from "typebox";
-import { StringEnum } from "@mariozechner/pi-ai";
 
 import { config, CONFIG_JSON } from "./lib/config.ts";
 import { GrokProvider, type XSearchOpts } from "./lib/grok.ts";
