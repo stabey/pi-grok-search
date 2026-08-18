@@ -14,7 +14,7 @@ Pi Coding Agent 的**深度联网搜索扩展**：通过 Grok API 注入 14 个�
 
 核心链路：Grok API（OpenAI 兼容）注入 `web_search` → Grok 自主多次搜索并带 `citation_card` 作答 → 自动剥离信源缓存，供 `get_sources` 复用。
 
-`web_fetch` / `web_map` 仅在配置了对应 API Key 时才会注册（无 key 或 `TAVILY_ENABLED=false` 时 Pi 看不到这两个工具；规划工具的枚举/提示会同步收窄）。
+`web_fetch` / `web_map` 仅在有可用后端时才会注册（规划工具的枚举/提示会同步收窄）。`TAVILY_ENABLED=false` 会隐藏 `web_map`，并取消 Tavily 作为合格后端；若配置了 Firecrawl，Pi 仍能看到 `web_fetch`（仅走 Firecrawl）。无可用 key 时两者都不注册。
 
 ## 环境要求
 
@@ -63,8 +63,8 @@ cp index.ts lib/ ~/.pi/agent/extensions/grok-search/ -r
 | `GROK_REASONING_EFFORT` | - | low / medium / high |
 | `GROK_DEBUG` | false | 调试输出 |
 | `GROK_RETRY_*` | 3/1/10 | 重试策略（次数/倍率/最大等待秒） |
-| `TAVILY_ENABLED` / `TAVILY_API_URL` / `TAVILY_API_KEY` | true | 配置后注册 web_fetch/web_map；未配置则不暴露 |
-| `FIRECRAWL_API_URL` / `FIRECRAWL_API_KEY` | - | 配置后注册 web_fetch（抓取降级链路） |
+| `TAVILY_ENABLED` / `TAVILY_API_URL` / `TAVILY_API_KEY` | true | 启用且有 key 时注册 web_fetch/web_map；关闭则不把 Tavily 当后端，也不注册 web_map |
+| `FIRECRAWL_API_URL` / `FIRECRAWL_API_KEY` | - | 有 key 时仍可单独注册 web_fetch（抓取降级 / Tavily 关闭时的唯一后端） |
 
 配置完成后重启 pi，调用 `get_config_info` 验证（会显示脱敏后的配置状态）。
 

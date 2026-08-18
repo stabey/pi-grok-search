@@ -2,7 +2,7 @@
 const path = require('path');
 const { createJiti } = require('jiti');
 const jiti = createJiti(__filename, {});
-const { isConfiguredApiKey, resolveFetchTools, planSearchToolNames } = jiti(
+const { isConfiguredApiKey, resolveFetchTools, planSearchToolNames, webFetchBackends } = jiti(
   path.join(__dirname, '..', 'lib', 'config.ts'),
 );
 
@@ -62,6 +62,18 @@ const tavilyOffFirecrawl = resolveFetchTools({
 check(
   'Tavily 关闭 + Firecrawl → 只注册 web_fetch',
   tavilyOffFirecrawl.webFetch === true && tavilyOffFirecrawl.webMap === false,
+);
+check(
+  'Tavily 关闭 + Firecrawl → Tavily 后端不可用',
+  tavilyOffFirecrawl.tavily === false && tavilyOffFirecrawl.firecrawl === true,
+);
+check(
+  'Tavily 关闭 + Firecrawl → web_fetch 只走 Firecrawl',
+  webFetchBackends(tavilyOffFirecrawl).join(',') === 'firecrawl',
+);
+check(
+  'Tavily 启用 + Firecrawl → web_fetch 先 Tavily 再 Firecrawl',
+  webFetchBackends({ tavily: true, firecrawl: true }).join(',') === 'tavily,firecrawl',
 );
 
 if (failed > 0) {

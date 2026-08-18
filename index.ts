@@ -13,7 +13,7 @@ import type { ExtensionAPI } from "./lib/pi-compat.ts";
 import { truncateHead, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, StringEnum } from "./lib/pi-compat.ts";
 import { Type } from "typebox";
 
-import { config, CONFIG_JSON, planSearchToolNames, resolveFetchTools } from "./lib/config.ts";
+import { config, CONFIG_JSON, planSearchToolNames, resolveFetchTools, webFetchBackends } from "./lib/config.ts";
 import { GrokProvider, type XSearchOpts } from "./lib/grok.ts";
 import {
   SourcesCache,
@@ -184,9 +184,9 @@ export default function grokSearchExtension(pi: ExtensionAPI) {
         config.grokReasoningEffort,
       );
 
-      // 额外信源配额（与 MCP 版一致：两者都有时优先 Firecrawl）
-      const hasTavily = !!config.tavilyApiKey;
-      const hasFirecrawl = !!config.firecrawlApiKey;
+      // 额外信源配额（与 MCP 版一致：两者都有时优先 Firecrawl；Tavily 关闭时不走 Tavily）
+      const hasTavily = fetchTools.tavily;
+      const hasFirecrawl = fetchTools.firecrawl;
       const extra = Math.max(0, Math.floor(params.extra_sources ?? 0));
       let firecrawlCount = 0;
       let tavilyCount = 0;
@@ -395,17 +395,21 @@ export default function grokSearchExtension(pi: ExtensionAPI) {
       onUpdate?.({ content: [{ type: "text", text: "📥 抓取中…" }], details: {} });
       const url = params.url.trim();
 
-      const tavilyResult = await tavilyExtract(url, signal);
-      if (tavilyResult) {
-        return { content: [{ type: "text", text: truncate(tavilyResult) }], details: { via: "tavily" } };
+      for (const backend of webFetchBackends(fetchTools)) {
+        if (backend === "tavily") {
+          const tavilyResult = await tavilyExtract(url, signal);
+          if (tavilyResult) {
+            return { content: [{ type: "text", text: truncate(tavilyResult) }], details: { via: "tavily" } };
+          }
+          continue;
+        }
+        const firecrawlResult = await firecrawlScrape(url, signal);
+        if (firecrawlResult) {
+          return { content: [{ type: "text", text: truncate(firecrawlResult) }], details: { via: "firecrawl" } };
+        }
       }
 
-      const firecrawlResult = await firecrawlScrape(url, signal);
-      if (firecrawlResult) {
-        return { content: [{ type: "text", text: truncate(firecrawlResult) }], details: { via: "firecrawl" } };
-      }
-
-      if (!config.tavilyApiKey && !config.firecrawlApiKey) {
+      if (!fetchTools.tavily && !fetchTools.firecrawl) {
         return {
           content: [{ type: "text", text: "配置错误: TAVILY_API_KEY 和 FIRECRAWL_API_KEY 均未配置" }],
           details: {},
