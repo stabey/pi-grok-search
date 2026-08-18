@@ -61,6 +61,36 @@ function getEnv(key: string): string | undefined {
   return process.env[key] ?? loadEnvFile()[key];
 }
 
+/** Missing, empty, or whitespace-only keys are treated as unset. */
+export function isConfiguredApiKey(value?: string): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+/** Which Tavily/Firecrawl tools should be registered with Pi. */
+export function resolveFetchTools(input: {
+  tavilyApiKey?: string;
+  firecrawlApiKey?: string;
+  tavilyEnabled: boolean;
+}): { webFetch: boolean; webMap: boolean } {
+  const tavily = input.tavilyEnabled && isConfiguredApiKey(input.tavilyApiKey);
+  const firecrawl = isConfiguredApiKey(input.firecrawlApiKey);
+  return {
+    webFetch: tavily || firecrawl,
+    webMap: tavily,
+  };
+}
+
+/** plan_tool_mapping / plan_sub_query 只列出实际会注册的搜索/抓取工具。 */
+export function planSearchToolNames(fetch: {
+  webFetch: boolean;
+  webMap: boolean;
+}): [string, ...string[]] {
+  const tools: [string, ...string[]] = ["web_search"];
+  if (fetch.webFetch) tools.push("web_fetch");
+  if (fetch.webMap) tools.push("web_map");
+  return tools;
+}
+
 /** OpenRouter 端点自动追加 :online 后缀（无搜索能力的模型用） */
 export function applyModelSuffix(model: string): string {
   const url = getEnv("GROK_API_URL") ?? "";
