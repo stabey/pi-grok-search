@@ -12,7 +12,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node test/sources.test.cjs",
+    "test": "node test/sources.test.cjs && node test/fetch-tools.test.cjs",
     "test:live": "node test/live.test.cjs",
     "typecheck": "tsc --noEmit",
     "install:pi": "bash install.sh"

@@ -13,7 +13,7 @@ import type { ExtensionAPI } from "./lib/pi-compat.ts";
 import { truncateHead, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, StringEnum } from "./lib/pi-compat.ts";
 import { Type } from "typebox";
 
-import { config, CONFIG_JSON } from "./lib/config.ts";
+import { config, CONFIG_JSON, planSearchToolNames, resolveFetchTools, webFetchBackends } from "./lib/config.ts";
 import { GrokProvider, type XSearchOpts } from "./lib/grok.ts";
 import {
   SourcesCache,
@@ -110,6 +110,14 @@ function truncate(text: string): string {
 }
 
 export default function grokSearchExtension(pi: ExtensionAPI) {
+  const fetchTools = resolveFetchTools({
+    tavilyApiKey: config.tavilyApiKey,
+    firecrawlApiKey: config.firecrawlApiKey,
+    tavilyEnabled: config.tavilyEnabled,
+  });
+  const planSearchTools = planSearchToolNames(fetchTools);
+  const planSearchToolsHint = planSearchTools.join(" | ");
+
   /* ================= web_search ================= */
   pi.registerTool({
     name: "web_search",
@@ -176,9 +184,9 @@ export default function grokSearchExtension(pi: ExtensionAPI) {
         config.grokReasoningEffort,
       );
 
-      // 额外信源配额（与 MCP 版一致：两者都有时优先 Firecrawl）
-      const hasTavily = !!config.tavilyApiKey;
-      const hasFirecrawl = !!config.firecrawlApiKey;
+      // 额外信源配额（与 MCP 版一致：两者都有时优先 Firecrawl；Tavily 关闭时不走 Tavily）
+      const hasTavily = fetchTools.tavily;
+      const hasFirecrawl = fetchTools.firecrawl;
       const extra = Math.max(0, Math.floor(params.extra_sources ?? 0));
       let firecrawlCount = 0;
       let tavilyCount = 0;
@@ -373,7 +381,7 @@ export default function grokSearchExtension(pi: ExtensionAPI) {
   });
 
   /* ================= web_fetch ================= */
-  pi.registerTool({
+  if (fetchTools.webFetch) pi.registerTool({
     name: "web_fetch",
     label: "Web Fetch",
     description: `抓取指定 URL 的完整内容并转为结构化 Markdown（100% 保真，不摘要不改写）。
@@ -387,17 +395,21 @@ export default function grokSearchExtension(pi: ExtensionAPI) {
       onUpdate?.({ content: [{ type: "text", text: "📥 抓取中…" }], details: {} });
       const url = params.url.trim();
 
-      const tavilyResult = await tavilyExtract(url, signal);
-      if (tavilyResult) {
-        return { content: [{ type: "text", text: truncate(tavilyResult) }], details: { via: "tavily" } };
+      for (const backend of webFetchBackends(fetchTools)) {
+        if (backend === "tavily") {
+          const tavilyResult = await tavilyExtract(url, signal);
+          if (tavilyResult) {
+            return { content: [{ type: "text", text: truncate(tavilyResult) }], details: { via: "tavily" } };
+          }
+          continue;
+        }
+        const firecrawlResult = await firecrawlScrape(url, signal);
+        if (firecrawlResult) {
+          return { content: [{ type: "text", text: truncate(firecrawlResult) }], details: { via: "firecrawl" } };
+        }
       }
 
-      const firecrawlResult = await firecrawlScrape(url, signal);
-      if (firecrawlResult) {
-        return { content: [{ type: "text", text: truncate(firecrawlResult) }], details: { via: "firecrawl" } };
-      }
-
-      if (!config.tavilyApiKey && !config.firecrawlApiKey) {
+      if (!fetchTools.tavily && !fetchTools.firecrawl) {
         return {
           content: [{ type: "text", text: "配置错误: TAVILY_API_KEY 和 FIRECRAWL_API_KEY 均未配置" }],
           details: {},
@@ -411,7 +423,7 @@ export default function grokSearchExtension(pi: ExtensionAPI) {
   });
 
   /* ================= web_map ================= */
-  pi.registerTool({
+  if (fetchTools.webMap) pi.registerTool({
     name: "web_map",
     label: "Web Map",
     description: `以图遍历方式爬取网站结构，生成站点地图（URL 清单）。可用自然语言指令聚焦特定内容。
@@ -639,7 +651,7 @@ export default function grokSearchExtension(pi: ExtensionAPI) {
       expected_output: Type.String({ description: "成功的样子" }),
       boundary: Type.String({ description: "排除什么——与兄弟子查询互斥" }),
       depends_on: Type.Optional(Type.String({ description: "逗号分隔的前置 ID 列表" })),
-      tool_hint: Type.Optional(Type.String({ description: "建议工具：web_search | web_fetch | web_map" })),
+      tool_hint: Type.Optional(Type.String({ description: `建议工具：${planSearchToolsHint}` })),
     }),
     async execute(_toolCallId, params) {
       const missing = requireSession(params.session_id);
@@ -711,7 +723,7 @@ export default function grokSearchExtension(pi: ExtensionAPI) {
     parameters: Type.Object({
       ...planCommonParams,
       sub_query_id: Type.String({ description: "要映射的子查询 ID" }),
-      tool: StringEnum(["web_search", "web_fetch", "web_map"] as const),
+      tool: StringEnum(planSearchTools),
       reason: Type.String({ description: "为什么选这个工具" }),
       params_json: Type.Optional(Type.String({ description: "工具参数的 JSON 字符串" })),
     }),

@@ -47,7 +47,7 @@ export async function tavilySearch(
   signal?: AbortSignal,
 ): Promise<TavilyResult[] | null> {
   const apiKey = config.tavilyApiKey;
-  if (!apiKey) return null;
+  if (!config.tavilyEnabled || !apiKey) return null;
   const endpoint = `${config.tavilyApiUrl.replace(/\/+$/, "")}/search`;
   try {
     const res = await postJson(
@@ -80,7 +80,7 @@ export async function tavilySearch(
 
 export async function tavilyExtract(url: string, signal?: AbortSignal): Promise<string | null> {
   const apiKey = config.tavilyApiKey;
-  if (!apiKey) return null;
+  if (!config.tavilyEnabled || !apiKey) return null;
   const endpoint = `${config.tavilyApiUrl.replace(/\/+$/, "")}/extract`;
   try {
     const res = await postJson(
@@ -111,7 +111,11 @@ export async function tavilyMap(
   signal?: AbortSignal,
 ): Promise<string> {
   const apiKey = config.tavilyApiKey;
-  if (!apiKey) return "配置错误: TAVILY_API_KEY 未配置，请设置环境变量 TAVILY_API_KEY";
+  if (!config.tavilyEnabled || !apiKey) {
+    return config.tavilyEnabled
+      ? "配置错误: TAVILY_API_KEY 未配置，请设置环境变量 TAVILY_API_KEY"
+      : "配置错误: Tavily 已禁用（TAVILY_ENABLED=false）";
+  }
   const endpoint = `${config.tavilyApiUrl.replace(/\/+$/, "")}/map`;
   const body: Record<string, unknown> = {
     url,
